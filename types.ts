@@ -5,6 +5,7 @@ export interface Message {
   timestamp: Date;
   isError?: boolean;
   groundingMetadata?: GroundingMetadata;
+  image?: string; // Base64 Data URL
 }
 
 export interface GroundingMetadata {

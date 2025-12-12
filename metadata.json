@@ -1,5 +1,5 @@
 {
-  "name": "AI Doctor Companion",
+  "name": "AI Health Buddy",
   "description": "A safe, non-diagnostic health companion powered by Gemini 3 Pro. Provides symptom explanations, specialist suggestions, first-aid education, and local medical resource finding.",
   "requestFramePermissions": [
     "microphone",

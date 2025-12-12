@@ -22,8 +22,8 @@ export const Header: React.FC<HeaderProps> = ({ isDarkMode, toggleTheme }) => {
       
       <div className="flex items-center gap-4">
         <div className="hidden sm:flex items-center gap-2">
-           <span className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-semibold rounded-full border border-green-200 dark:border-green-800">
-            Gemini 3 Pro Active
+           <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-semibold rounded-full border border-blue-200 dark:border-blue-800">
+            Gemini 2.5 Flash Active
           </span>
         </div>
 

@@ -25,10 +25,12 @@ export const ChatInterface: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [location, setLocation] = useState<GeolocationCoordinates | undefined>(undefined);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Request location on mount for better local grounding
   useEffect(() => {
@@ -98,8 +100,32 @@ export const ChatInterface: React.FC = () => {
     recognition.start();
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Check file size (limit to 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Image size too large. Please select an image under 5MB.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSelectedImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+    // Reset input so same file can be selected again if needed
+    e.target.value = '';
+  };
+
+  const handleRemoveImage = () => {
+    setSelectedImage(null);
+  };
+
   const handleSend = async (text: string = input) => {
-    if (!text.trim() || isLoading) return;
+    // Allow send if text OR image exists
+    if ((!text.trim() && !selectedImage) || isLoading) return;
 
     // Stop listening if sending
     if (isListening) {
@@ -111,21 +137,25 @@ export const ChatInterface: React.FC = () => {
       id: Date.now().toString(),
       role: 'user',
       content: text,
-      timestamp: new Date()
+      timestamp: new Date(),
+      image: selectedImage || undefined
     };
 
     setMessages(prev => [...prev, userMsg]);
     setInput('');
+    const currentImage = selectedImage; // Capture current image for the API call
+    setSelectedImage(null); // Clear preview immediately
     setIsLoading(true);
 
     try {
       const history = messages.filter(m => !m.isError).map(m => ({
           ...m,
           role: m.role,
-          content: m.content
+          content: m.content,
+          image: m.image
       })); // sanitize history, remove errors
 
-      const response = await sendMessageToGemini(history, text, location);
+      const response = await sendMessageToGemini(history, text, location, currentImage || undefined);
 
       const botMsg: Message = {
         id: (Date.now() + 1).toString(),
@@ -160,7 +190,7 @@ export const ChatInterface: React.FC = () => {
   return (
     <div className="flex flex-col h-full bg-white dark:bg-slate-900 relative transition-colors duration-200">
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 pb-36 scrollbar-hide">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 pb-40 scrollbar-hide">
         {messages.map((msg) => (
           <div
             key={msg.id}
@@ -175,6 +205,17 @@ export const ChatInterface: React.FC = () => {
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-bl-none'
               }`}
             >
+              {/* Display Image if present */}
+              {msg.image && (
+                <div className="mb-3">
+                  <img 
+                    src={msg.image} 
+                    alt="Uploaded symptom" 
+                    className="rounded-lg max-h-64 object-cover border border-black/10 dark:border-white/10"
+                  />
+                </div>
+              )}
+
               <div className={`prose ${msg.role === 'user' ? 'prose-invert' : 'prose-slate dark:prose-invert'} max-w-none text-sm leading-relaxed whitespace-pre-wrap`}>
                 {msg.content}
               </div>
@@ -216,14 +257,56 @@ export const ChatInterface: React.FC = () => {
       {/* Input Area */}
       <div className="absolute bottom-0 left-0 w-full bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 z-10 transition-colors duration-200">
         <QuickActions onActionSelect={handleSend} disabled={isLoading} />
+        
+        {/* Image Preview Area */}
+        {selectedImage && (
+          <div className="px-4 pt-3 flex items-center">
+            <div className="relative group">
+              <img 
+                src={selectedImage} 
+                alt="Selected" 
+                className="h-16 w-16 object-cover rounded-lg border border-blue-200 dark:border-blue-800 shadow-sm" 
+              />
+              <button
+                onClick={handleRemoveImage}
+                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600 transition-colors"
+                title="Remove image"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="p-4 max-w-4xl mx-auto flex gap-3 items-end">
+          {/* File Input */}
+          <input 
+            type="file" 
+            accept="image/*" 
+            className="hidden" 
+            ref={fileInputRef} 
+            onChange={handleFileSelect}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="p-3 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 rounded-xl transition-colors mb-[2px]"
+            title="Upload Image"
+            disabled={isLoading}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </button>
+
           <div className="relative flex-1">
             <textarea
               ref={textareaRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={isListening ? "Listening..." : "Describe your symptoms, ask about a condition, or find a doctor..."}
+              placeholder={isListening ? "Listening..." : "Type a message or upload a photo of your symptom..."}
               className={`w-full bg-slate-50 dark:bg-slate-800 border text-slate-900 dark:text-slate-100 rounded-xl px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:bg-white dark:focus:bg-slate-800 transition-all resize-none shadow-sm placeholder-slate-400 dark:placeholder-slate-500 ${
                 isListening 
                   ? 'border-red-400 ring-2 ring-red-100 dark:ring-red-900/30 bg-red-50/10 dark:bg-red-900/10' 
@@ -258,7 +341,7 @@ export const ChatInterface: React.FC = () => {
           </div>
           <button
             onClick={() => handleSend()}
-            disabled={!input.trim() || isLoading}
+            disabled={(!input.trim() && !selectedImage) || isLoading}
             className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white p-3 rounded-xl transition-all shadow-md flex-shrink-0"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 transform rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
