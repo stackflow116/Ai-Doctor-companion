@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -8,6 +9,24 @@
     <script>
       tailwind.config = {
         darkMode: 'class',
+        theme: {
+          extend: {
+            animation: {
+              'message-in': 'messageIn 0.3s ease-out forwards',
+              'fade-in': 'fadeIn 0.2s ease-out forwards',
+            },
+            keyframes: {
+              messageIn: {
+                '0%': { opacity: '0', transform: 'translateY(8px) scale(0.98)' },
+                '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
+              },
+              fadeIn: {
+                '0%': { opacity: '0' },
+                '100%': { opacity: '1' },
+              }
+            }
+          }
+        }
       }
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -23,6 +42,12 @@
           -ms-overflow-style: none;
           scrollbar-width: none;
       }
+      
+      /* Smooth transitions for theme switching */
+      * {
+        transition-property: background-color, border-color, color, fill, stroke;
+        transition-duration: 200ms;
+      }
     </style>
   <script type="importmap">
 {
@@ -35,7 +60,7 @@
 }
 </script>
 </head>
-  <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50 h-screen w-screen overflow-hidden transition-colors duration-200">
+  <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50 h-screen w-screen overflow-hidden">
     <div id="root" class="h-full w-full"></div>
   </body>
 </html>
